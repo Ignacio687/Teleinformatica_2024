@@ -21,23 +21,34 @@ class CustomRouter(Node):
 class CustomTopology(Topo):
 
     def build(self):
-        rootNetSwitch = self.addSwitch('rootNetSwitch', dpid='0000000000000100')
-        rootNetRouter = self.addNode('rootNetRouter', cls=CustomRouter, ip='100.100.100.100/29')
-        self.addLink(rootNetRouter, rootNetSwitch, intfName1='r-eth0', intfName2='s-eth0', params1={'ip': '100.100.100.100/29'})
-        rootRouterIpAddrTuple = ('192.168.100.6', '192.168.100.14', '192.168.100.22', '192.168.100.30', '192.168.100.38', '192.168.100.46')
-        branchRouterIpAddrTuple = ('192.168.100.1', '192.168.100.9', '192.168.100.17', '192.168.100.25', '192.168.100.33', '192.168.100.41')
-        for branchCounter in range(0, 6):
-            self.addLink(rootNetRouter, rootNetSwitch, intfName1='r-eth{}'.format(branchCounter+1), intfName2='s-eth{}'.format(branchCounter+1), params1={'ip': rootRouterIpAddrTuple[branchCounter]+"/29"})
-            branchSwitch = self.addSwitch('branch'+str(branchCounter)+'Switch', dpid='0000000000000{}'.format(branchCounter+1))
-            branchRouter = self.addNode('branch'+str(branchCounter)+'Router', cls=CustomRouter, ip='branchRouterIpAddrTuple[branchCounter]+"/29"')
-            self.addLink(branchRouter, rootNetSwitch, intfName1='r{}-eth0'.format(branchCounter), intfName2='s-eth{}'.format(branchCounter+10), params1={'ip': branchRouterIpAddrTuple[branchCounter]+"/29"})
-            self.addLink(branchRouter, branchSwitch, intfName1='r{}-eth1'.format(branchCounter), intfName2='s{}-eth0'.format(branchCounter), params1={'ip': '10.0.{}.1'.format(branchCounter+1)+"/24"})
+        rootNetRouter = self.addNode('rootNetRouter', cls=CustomRouter, ip='192.168.100.6')
+        for branchCounter in range(1, 7):
+            rootNetSwitch = self.addSwitch('rootNetSwitch{}'.format(branchCounter))
+            self.addLink(rootNetRouter, rootNetSwitch)
+            branchRouter = self.addNode('branch'+str(branchCounter)+'Router', cls=CustomRouter, ip='10.0.{}.1/29'.format(branchCounter))
+            branchSwitch = self.addSwitch('branch'+str(branchCounter)+'Switch')
+            self.addLink(branchRouter, rootNetSwitch)
+            self.addLink(branchRouter, branchSwitch)
             for hostCounter in range(0, random.randint(3, 15)):
-                host = self.addHost('host'+str(hostCounter)+'Branch'+str(branchCounter), ip='10.0.{}.{}'.format(branchCounter+1, hostCounter+2)+"/24")
-                self.addLink(host, branchSwitch, intfName1='h{}b{}-eth0'.format(hostCounter, branchCounter), intfName2='s{}-eth{}'.format(branchCounter, hostCounter+2, params1={'ip': '10.0.{}.{}'.format(branchCounter+1, hostCounter+2)+"/24"}))
+                host = self.addHost('host'+str(hostCounter)+'Branch'+str(branchCounter))
+                self.addLink(host, branchSwitch)
+
+    @staticmethod
+    def routing(net):
+        rootNetRouter = net.get('rootNetRouter')
+        for netInterfaceCounter in range(0, 6):
+            if netInterfaceCounter < 5:
+                rootNetRouter.cmd('ip addr add 192.168.100.{}/29 dev eth{}'.format(14+(8*netInterfaceCounter), netInterfaceCounter+1))
+            rootNetRouter.cmd('ip route add 10.0.{}.0/24 via 192.168.100.{}'.format(netInterfaceCounter+1, 1+(8*netInterfaceCounter)))
+            branchRouter = net.get('branch'+str(netInterfaceCounter+1)+'Router')
+            branchRouter.cmd('ip addr add 192.168.100.{}/29 dev eth{}'.format(1+(8*netInterfaceCounter), netInterfaceCounter+1))
+            branchRouter.cmd('ip route add 10.0.0.0/21 via 192.168.100.{}'.format(6+(8*netInterfaceCounter)))
+            
 
 if __name__ == '__main__':
     setLogLevel('info')
     net = Mininet(topo=CustomTopology(), controller=None)
+    net.start()
+    CustomTopology.routing(net)
     CLI(net)
     net.stop()
