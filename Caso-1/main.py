@@ -19,7 +19,7 @@ def myNetwork():
     net = Mininet( topo=None,
                    build=False)
 
-    mainNetRouter = net.addHost('mr', cls=CustomRouter)
+    mainNetRouter = net.addHost('mr', cls=CustomRouter, ip='192.168.100.6/29')
     for branchCounter in range(1, 7):
         mainNetSwitch = net.addSwitch('ms{}'.format(branchCounter), cls=OVSKernelSwitch, 
                                     failMode='standalone')
