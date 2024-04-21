@@ -55,6 +55,8 @@ def myNetwork():
         branchRouter.cmd('ip addr add 192.168.100.{}/29 dev b{}r-eth1'
                             .format(1+(8*(netIntCounter)), netIntCounter+1))
         branchRouter.cmd('ip route add 10.0.0.0/21 via 192.168.100.{}'.format(6+(8*netIntCounter)))
+        branchRouter.cmd('ip route add 192.168.100.0/26 via 192.168.100.{}'
+                            .format(6+(8*netIntCounter)))
         branchRouter.cmd('sysctl net.ipv4.ip_forward=1')
         hostCounter = 1
         while True:
