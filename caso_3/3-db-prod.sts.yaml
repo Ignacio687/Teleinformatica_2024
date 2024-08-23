@@ -35,6 +35,14 @@ spec:
             - name: mysqldb-data
               mountPath: /var/lib/mysql
 
+        - name: "sqldump-download"
+          image: "alpine:latest"
+          imagePullPolicy: "IfNotPresent"
+          command: ["sh", "-c", "wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1VVff51xU-8DDMSFq9HeRD3uhhHAuu1gQ' -O /sqldump/google-mobility.sql"]
+          volumeMounts:
+            - name: sql-dump-volume
+              mountPath: "/sqldump"
+
       containers:
         - name: mysqldb
           image: mysql:9.0
@@ -80,5 +88,5 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: 2Gi
+            storage: 1Gi
 

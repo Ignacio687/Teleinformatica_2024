@@ -5,4 +5,4 @@ metadata:
 data:
   MB_DB_TYPE: mysql
   MB_DB_PORT: "3306"
-  MB_DB_HOST:  10.43.20.192
+  MB_DB_HOST: mysqldb
