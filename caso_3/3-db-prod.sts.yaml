@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysqldb
+  labels:
+    app: mysqldb
+spec:
+  ports:
+    - port: 3306
+      name: mysqldb
+  selector:
+    app: mysqldb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysqldb
+spec:
+  selector:
+    matchLabels:
+      app: mysqldb
+  serviceName: "mysqldb"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysqldb
+    spec:
+      initContainers:
+        - name: "remove-lost-found"
+          image: "busybox:1.25.0"
+          imagePullPolicy: "IfNotPresent"
+          command: ["rm", "-fr", "/var/lib/mysql/lost+found"]
+          volumeMounts:
+            - name: mysqldb-data
+              mountPath: /var/lib/mysql
+
+      containers:
+        - name: mysqldb
+          image: mysql:9.0
+          imagePullPolicy: Always
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-name
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-password
+          ports:
+            - containerPort: 3306
+              name: mysqldb
+          volumeMounts:
+            - mountPath: "/docker-entrypoint-initdb.d/"
+              name: sql-dump-volume     
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: mysql-secret
+        - name: sql-dump-volume
+          persistentVolumeClaim:
+            claimName: sql-dump-pvc
+  volumeClaimTemplates:
+    - metadata:
+        name: mysqldb-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 2Gi
+

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metabase
+  labels:
+    app: metabase
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metabase
+  template:
+    metadata:
+      labels:
+        app: metabase
+    spec:
+      containers:
+        - name: metabase
+          image: metabase/metabase:v0.50.20.5
+          imagePullPolicy: Always
+          env:
+            - name: MB_DB_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: metabase-config
+                  key: MB_DB_TYPE 
+            - name: MB_DB_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-name
+            - name: MB_DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: metabase-config
+                  key: MB_DB_PORT
+            - name: MB_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-user
+            - name: MB_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-password
+            - name: MB_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: metabase-config
+                  key: MB_DB_HOST
+          ports:
+            - name: metabase
+              containerPort: 3000
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: mysql-secret
+        - configMap:
+            name: metabase-config 
+          name: config-volume
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metabase-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: metabase
+
