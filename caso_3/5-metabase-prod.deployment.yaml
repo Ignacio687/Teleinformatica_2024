@@ -18,7 +18,28 @@ spec:
         - name: "sqlconnection-starter"
           image: "mysql:9.0"
           imagePullPolicy: "IfNotPresent"
-          command: ["sh", "-c", "mysql -h mysqldb -P 3306 -udbadmin -p8sdjoawl@lf2"]
+          env:
+            - name: MB_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: metabase-config
+                  key: MB_DB_HOST
+            - name: MB_DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: metabase-config
+                  key: MB_DB_PORT
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-user
+            - name: MB_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db-password        
+          command: ["sh", "-c", "mysql -h $MB_DB_HOST -P $MB_DB_PORT -u$DB_USER -p$MB_DB_PASS"] 
 
       containers:
         - name: metabase
